@@ -1,60 +1,41 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 
+#define TAMANHO_TABULEIRO 10
+#define TAMANHO_HABILIDADE 5
+#define AGUA 0
+#define NAVIO 3
+#define HABILIDADE 5
 
-void startMap (int map[10][10]){
-    for (int i = 0; i < 10; i++){
-        for (int j = 0; j < 10; j++){
-            map[i][j] = 0; // inicializa o mapa com 0 = água
+void startMap(int map[TAMANHO_TABULEIRO][TAMANHO_TABULEIRO]) {
+    for (int i = 0; i < TAMANHO_TABULEIRO; i++) {
+        for (int j = 0; j < TAMANHO_TABULEIRO; j++) {
+            map[i][j] = AGUA;
         }
     }
 }
 
-void positionShip(int map[10][10]) {
+void positionShip(int map[TAMANHO_TABULEIRO][TAMANHO_TABULEIRO]) {
     int linha, coluna, direcao, valido;
 
     do {
-        printf("Digite a linha inicial do navio (1 a 10)\n");
+        printf("Digite a linha inicial do navio (1 a 10): ");
         scanf("%d", &linha);
-
-        printf("Digite a coluna inicial do navio (1 a 10)\n");
+        printf("Digite a coluna inicial do navio (1 a 10): ");
         scanf("%d", &coluna);
-
-        printf("Digite a direção do navio (0 = horizontal, 1 = vertical, 2 = diagonal ascendente, 3 = diagonal descendente)\n");
+        printf("Digite a direção do navio (0 = horizontal, 1 = vertical, 2 = diagonal ascendente, 3 = diagonal descendente): ");
         scanf("%d", &direcao);
 
-        linha -= 1; // ajusta a linha para o índice do array
-        coluna -= 1; // ajusta a coluna para o índice do array
-
-        // Verifica se há espaço disponível para posicionar o navio
-        valido = 1; // Assume que a posição é válida
+        linha -= 1;
+        coluna -= 1;
+        valido = 1;
 
         for (int i = 0; i < 3; i++) {
-            if (direcao == 0) { // Horizontal
-                if (coluna + i >= 10 || map[linha][coluna + i] != 0) {
-                    valido = 0;
-                    break;
-                }
+            int x = linha + (direcao == 1 ? i : (direcao == 2 ? -i : (direcao == 3 ? i : 0)));
+            int y = coluna + (direcao == 0 ? i : (direcao == 2 ? i : (direcao == 3 ? i : 0)));
 
-            } else if (direcao == 1) { // Vertical
-                if (linha + i >= 10 || map[linha + i][coluna] != 0) {
-                    valido = 0;
-                    break;
-                }
-
-            } else if (direcao == 2) { // Diagonal ascendente
-                if (linha - i < 0 || coluna + i >= 10 || map[linha - i][coluna + i] != 0) {
-                    valido = 0;
-                    break;
-                }
-            } else if (direcao == 3) { // Diagonal descendente
-                if (linha + i >= 10 || coluna + i >= 10 || map[linha + i][coluna + i] != 0) {
-                    valido = 0;
-                    break;
-                }
-            }
-
-             else  {
-                printf("Direção inválida!\n");
+            if (x < 0 || x >= TAMANHO_TABULEIRO || y < 0 || y >= TAMANHO_TABULEIRO || map[x][y] != AGUA) {
                 valido = 0;
                 break;
             }
@@ -64,56 +45,101 @@ void positionShip(int map[10][10]) {
             printf("\n O navio não pode ser posicionado aqui! Ele se sobrepõe ou sai do tabuleiro. Tente novamente.\n\n");
         }
 
-    } while (!valido); // Repete até encontrar uma posição válida
+    } while (!valido);
 
-    // Se a posição for válida, o navio é marcado no mapa
     for (int i = 0; i < 3; i++) {
-        if (direcao == 0) {
-            map[linha][coluna + i] = 3;
-        } else if (direcao == 1) {
-            map[linha + i][coluna] = 3;
-        } else if (direcao == 2) {
-            map[linha - i][coluna + i] = 3;
-        } else if (direcao == 3) {
-            map[linha + i][coluna + i] = 3;
+        int x = linha + (direcao == 1 ? i : (direcao == 2 ? -i : (direcao == 3 ? i : 0)));
+        int y = coluna + (direcao == 0 ? i : (direcao == 2 ? i : (direcao == 3 ? i : 0)));
+        map[x][y] = NAVIO;
+    }
+}
+
+// Cria a matriz correspondente ao ataque especial (Cone, Cruz ou Octaedro)
+void createAbilityMatrix(int matriz[TAMANHO_HABILIDADE][TAMANHO_HABILIDADE], int tipo) {
+    for (int i = 0; i < TAMANHO_HABILIDADE; i++) {
+        for (int j = 0; j < TAMANHO_HABILIDADE; j++) {
+            if (tipo == 0) { // Cone apontado para baixo
+                matriz[i][j] = (j >= TAMANHO_HABILIDADE / 2 - i && j <= TAMANHO_HABILIDADE / 2 + i) ? 1 : 0;
+            } else if (tipo == 1) { // Cruz
+                matriz[i][j] = (i == TAMANHO_HABILIDADE / 2 || j == TAMANHO_HABILIDADE / 2) ? 1 : 0;
+            } else { // Octaedro (losango)
+                matriz[i][j] = (abs(i - TAMANHO_HABILIDADE / 2) + abs(j - TAMANHO_HABILIDADE / 2) <= TAMANHO_HABILIDADE / 2) ? 1 : 0;
+            }
         }
     }
 }
 
-void showMap(int map[10][10]){
-    for (int i = 0; i < 10; i++){
-        for (int j = 0; j < 10; j++){
-            printf("%d ", map[i][j]); // imprime o mapa na tela
+// Aplica um ataque aleatório ao tabuleiro
+void applyRandomAbility(int map[TAMANHO_TABULEIRO][TAMANHO_TABULEIRO]) {
+    int habilidade[TAMANHO_HABILIDADE][TAMANHO_HABILIDADE];
+    int origemX = rand() % TAMANHO_TABULEIRO;
+    int origemY = rand() % TAMANHO_TABULEIRO;
+    int tipoAtaque = rand() % 3; // Escolhe Cone (0), Cruz (1) ou Octaedro (2)
+
+    createAbilityMatrix(habilidade, tipoAtaque);
+
+    printf("\n🔴 Habilidade %s ativada em (%d, %d)!\n\n", tipoAtaque == 0 ? "Cone" : (tipoAtaque == 1 ? "Cruz" : "Octaedro"), origemX + 1, origemY + 1);
+
+    int atingido = 0;
+    for (int i = 0; i < TAMANHO_HABILIDADE; i++) {
+        for (int j = 0; j < TAMANHO_HABILIDADE; j++) {
+            int x = origemX + i - TAMANHO_HABILIDADE / 2;
+            int y = origemY + j - TAMANHO_HABILIDADE / 2;
+
+            if (x >= 0 && x < TAMANHO_TABULEIRO && y >= 0 && y < TAMANHO_TABULEIRO && habilidade[i][j] == 1) {
+                if (map[x][y] == NAVIO) {
+                    atingido = 1;
+                } else {
+                    map[x][y] = HABILIDADE;
+                }
+            }
         }
-        printf("\n"); // pula para a próxima linha
+    }
+
+    if (atingido) {
+        printf("\n💥 Navio atingido! Ele foi destruído!\n");
+        for (int i = 0; i < TAMANHO_TABULEIRO; i++) {
+            for (int j = 0; j < TAMANHO_TABULEIRO; j++) {
+                if (map[i][j] == NAVIO) {
+                    map[i][j] = AGUA;
+                }
+            }
+        }
     }
 }
-    
 
+void showMap(int map[TAMANHO_TABULEIRO][TAMANHO_TABULEIRO]) {
+    for (int i = 0; i < TAMANHO_TABULEIRO; i++) {
+        for (int j = 0; j < TAMANHO_TABULEIRO; j++) {
+            printf("%d ", map[i][j]);
+        }
+        printf("\n");
+    }
+}
 
+int main() {
+    srand(time(NULL));
 
+    int map[TAMANHO_TABULEIRO][TAMANHO_TABULEIRO];
 
-
-int main(){
-
-
-
-    int index;
-    int map[10][10]; // cria o mapa 10x10
-
-    startMap(map); // inicializa o mapa
+    startMap(map);
 
     printf("Posicione o primeiro navio:\n");
-    positionShip(map); // chama a função para posicionar o navio no mapa
+    positionShip(map);
 
     printf("Posicione o segundo navio:\n");
-    positionShip(map); // chama a função para posicionar o navio no mapa
+    positionShip(map);
 
-   
-    showMap(map); // chama a função para mostrar o mapa na tela
+    printf("\nMapa Inicial:\n");
+    showMap(map);
 
+    printf("\n⏳ Ativando habilidade 1...\n");
+    applyRandomAbility(map);
+    showMap(map);
 
-    
+    printf("\n⏳ Ativando habilidade 2...\n");
+    applyRandomAbility(map);
+    showMap(map);
 
-return 0;
+    return 0;
 }
