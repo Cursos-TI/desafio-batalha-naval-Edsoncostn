@@ -19,7 +19,7 @@ void positionShip(int map[10][10]) {
         printf("Digite a coluna inicial do navio (1 a 10)\n");
         scanf("%d", &coluna);
 
-        printf("Digite a direção do navio (0 = horizontal, 1 = vertical)\n");
+        printf("Digite a direção do navio (0 = horizontal, 1 = vertical, 2 = diagonal ascendente, 3 = diagonal descendente)\n");
         scanf("%d", &direcao);
 
         linha -= 1; // ajusta a linha para o índice do array
@@ -27,19 +27,33 @@ void positionShip(int map[10][10]) {
 
         // Verifica se há espaço disponível para posicionar o navio
         valido = 1; // Assume que a posição é válida
-        
+
         for (int i = 0; i < 3; i++) {
             if (direcao == 0) { // Horizontal
                 if (coluna + i >= 10 || map[linha][coluna + i] != 0) {
                     valido = 0;
                     break;
                 }
+
             } else if (direcao == 1) { // Vertical
                 if (linha + i >= 10 || map[linha + i][coluna] != 0) {
                     valido = 0;
                     break;
                 }
-            } else {
+
+            } else if (direcao == 2) { // Diagonal ascendente
+                if (linha - i < 0 || coluna + i >= 10 || map[linha - i][coluna + i] != 0) {
+                    valido = 0;
+                    break;
+                }
+            } else if (direcao == 3) { // Diagonal descendente
+                if (linha + i >= 10 || coluna + i >= 10 || map[linha + i][coluna + i] != 0) {
+                    valido = 0;
+                    break;
+                }
+            }
+
+             else  {
                 printf("Direção inválida!\n");
                 valido = 0;
                 break;
@@ -56,8 +70,12 @@ void positionShip(int map[10][10]) {
     for (int i = 0; i < 3; i++) {
         if (direcao == 0) {
             map[linha][coluna + i] = 3;
-        } else {
+        } else if (direcao == 1) {
             map[linha + i][coluna] = 3;
+        } else if (direcao == 2) {
+            map[linha - i][coluna + i] = 3;
+        } else if (direcao == 3) {
+            map[linha + i][coluna + i] = 3;
         }
     }
 }
